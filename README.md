@@ -1,6 +1,8 @@
 # Aural
 
-**Tested and working audio playback library for .NET** — Play audio files with a single line of code using cross-platform OpenAL support.
+**Audio playback library for .NET** — Play audio files with a single line of code using cross-platform OpenAL support.
+
+[Aural is on NuGet](https://www.nuget.org/packages/Aural)
 
 ## Features
 
