@@ -8,7 +8,7 @@
 
 - **Simple API**: Play any audio file with `Player.Play(path, volume, loop)`
 - **Cross-platform**: Works on Windows, macOS, and Linux automatically
-- **Format support**: WAV, OGG Vorbis
+- **Format support**: WAV, OGG Vorbis, MP3
 - **Playback control**: Pause, resume, stop, volume adjustment, seeking
 - **Zero setup**: No initialization required—just start playing
 - **Intuitive tokens**: Control-based API via PlaybackToken objects
@@ -26,7 +26,7 @@ dotnet add package Aural
 using Aural;
 
 // Play an audio file
-var token = Player.Play("path/to/song.ogg", 0.7f, loop: true);
+var token = Player.Play("path/to/song.mp3", 0.7f, loop: true);
 
 // Let it play for 10 seconds
 Thread.Sleep(10000);
@@ -74,9 +74,10 @@ Plays an audio file and returns a PlaybackToken for control.
 Disposes all active playback sessions. Call on application shutdown.
 
 ## Supported Formats
-C
+
 - WAV (.wav)
 - OGG (.ogg)
+- MPEG (.mp3)
 
 ## Platform Support
 

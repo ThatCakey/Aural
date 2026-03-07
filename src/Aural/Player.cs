@@ -4,18 +4,18 @@ namespace Aural;
 
 /// <summary>
 /// Main public API for audio playback. Use this static class to play audio files.
-/// Example: var token = Player.Play("song.mp3", 0.7f, true);
+/// Example: var token = Player.Play("song.ogg", 0.7f, true);
 /// </summary>
 public static class Player
 {
     private static readonly HashSet<AudioPlayer> ActivePlayers = new();
-    private const int MaxSimultaneousPlaybacks = 1024;
+    private const int MaxSimultaneousPlaybacks = 255;
 
     /// <summary>
     /// Plays an audio file and returns a token for playback control.
-    /// Supports WAV, MP3, and OGG formats. Works on Windows, Mac, and Linux automatically.
+    /// Supports WAV, OGG Vorbis, and MP3 formats. Works on Windows, Mac, and Linux automatically.
     /// </summary>
-    /// <param name="filePath">Path to the audio file (WAV, MP3, or OGG).</param>
+    /// <param name="filePath">Path to the audio file (WAV, OGG, or MP3).</param>
     /// <param name="volume">Volume level from 0.0 (silent) to 1.0 (full volume). Default is 1.0.</param>
     /// <param name="loop">Whether to loop the audio file. Default is false.</param>
     /// <returns>
@@ -24,7 +24,7 @@ public static class Player
     /// </returns>
     /// <example>
     /// <code>
-    /// var token = Aural.Player.Play("music.mp3", 0.7f, true);
+    /// var token = Aural.Player.Play("music.ogg", 0.7f, true);
     /// if (token != null)
     /// {
     ///     Thread.Sleep(5000);

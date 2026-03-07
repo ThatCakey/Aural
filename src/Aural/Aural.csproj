@@ -9,16 +9,16 @@
 
     <!-- NuGet Packaging -->
     <PackageId>Aural</PackageId>
-    <Version>1.0.2</Version>
+    <Version>1.1.0</Version>
     <Title>Aural</Title>
     <Authors>ThatCakey</Authors>
-    <Description>A cross-platform audio playback library for WAV and OGG formats. Play audio with a single line of code</Description>
+    <Description>A cross-platform audio playback library for WAV, OGG, and MP3 formats. Play audio with a single line of code</Description>
     <PackageProjectUrl>https://github.com/ThatCakey/Aural</PackageProjectUrl>
-    <PackageReleaseNotes>Initial release: cross-platform audio playback for WAV and OGG with volume control, pause/resume, and seeking.</PackageReleaseNotes>
+    <PackageReleaseNotes>v1.1.0: Added MP3 format support. v1.0: cross-platform audio playback for WAV and OGG with volume control, pause/resume, and seeking.</PackageReleaseNotes>
     <RepositoryUrl>https://github.com/ThatCakey/Aural</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageTags>audio;playback;ogg;wav;cross-platform;openal</PackageTags>
+    <PackageTags>audio;playback;ogg;wav;mp3;cross-platform;openal</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
@@ -27,6 +27,7 @@
     <None Include="../../README.md" Pack="true" PackagePath="\"/>
     <PackageReference Include="OpenTK.Audio.OpenAL" Version="4.8.0" />
     <PackageReference Include="NVorbis" Version="0.10.5" />
+    <PackageReference Include="NLayer" Version="1.16.0" />
   </ItemGroup>
 
 </Project>

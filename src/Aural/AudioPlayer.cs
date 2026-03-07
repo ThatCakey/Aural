@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using OpenTK.Audio.OpenAL;
 using NVorbis;
+using NLayer;
 
 namespace Aural;
 
@@ -164,8 +165,11 @@ internal class AudioPlayer : IDisposable
                 case ".ogg":
                     LoadOgg(filePath);
                     break;
+                case ".mp3":
+                    LoadMp3(filePath);
+                    break;
                 default:
-                    throw new NotSupportedException($"Format '{extension}' not supported. Use WAV or OGG.");
+                    throw new NotSupportedException($"Format '{extension}' not supported. Use WAV, OGG, or MP3.");
             }
         }
         catch (Exception ex)
@@ -267,6 +271,43 @@ internal class AudioPlayer : IDisposable
         catch (Exception ex)
         {
             throw new InvalidOperationException($"Failed to decode OGG: {ex.Message}", ex);
+        }
+    }
+
+    private void LoadMp3(string filePath)
+    {
+        try
+        {
+            using var stream = File.OpenRead(filePath);
+            using var mpegFile = new NLayer.MpegFile(stream);
+
+            _sampleRate = mpegFile.SampleRate;
+            _channels = mpegFile.Channels;
+
+            // Read all samples
+            var samples = new List<float>();
+            var buffer = new float[4096];
+
+            int samplesRead;
+            while ((samplesRead = mpegFile.ReadSamples(buffer, 0, buffer.Length)) > 0)
+            {
+                samples.AddRange(buffer.Take(samplesRead));
+            }
+
+            _totalSamples = samples.Count / _channels;
+
+            // Convert float to PCM16
+            _audioData = new byte[samples.Count * 2];
+            for (int i = 0; i < samples.Count; i++)
+            {
+                float sample = Math.Clamp(samples[i], -1f, 1f);
+                short pcmSample = (short)(sample * short.MaxValue);
+                BitConverter.GetBytes(pcmSample).CopyTo(_audioData, i * 2);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Failed to decode MP3: {ex.Message}", ex);
         }
     }
 
