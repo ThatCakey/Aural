@@ -9,7 +9,7 @@
 
     <!-- NuGet Packaging -->
     <PackageId>Aural</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.2</Version>
     <Title>Aural</Title>
     <Authors>ThatCakey</Authors>
     <Description>A cross-platform audio playback library for WAV and OGG formats. Play audio with a single line of code</Description>
@@ -20,9 +20,11 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>audio;playback;ogg;wav;cross-platform;openal</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\"/>
     <PackageReference Include="OpenTK.Audio.OpenAL" Version="4.8.0" />
     <PackageReference Include="NVorbis" Version="0.10.5" />
   </ItemGroup>
