@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Aural.Filters;
 
 namespace Aural;
 
@@ -113,4 +114,10 @@ public class PlaybackToken
     /// Gets the total duration of the audio file in seconds.
     /// </summary>
     public float Duration => _audioPlayer.Duration;
+
+    /// <summary>
+    /// Gets a reconstructed AudioEffect object showing which filters are currently active.
+    /// This is a copy; modifying it has no effect on the playback.
+    /// </summary>
+    public AudioEffect GetActiveFilters() => _audioPlayer.GetActiveEffect();
 }

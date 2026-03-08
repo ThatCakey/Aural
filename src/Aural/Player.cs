@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Aural.Filters;
 
 namespace Aural;
 
@@ -18,25 +19,25 @@ public static class Player
     /// <param name="filePath">Path to the audio file (WAV, OGG, or MP3).</param>
     /// <param name="volume">Volume level from 0.0 (silent) to 1.0 (full volume). Default is 1.0.</param>
     /// <param name="loop">Whether to loop the audio file. Default is false.</param>
+    /// <param name="effect">Optional audio effects (filters). Applied at playback start and cannot be modified during playback.</param>
     /// <returns>
     /// A PlaybackToken for controlling playback (pause, resume, stop, volume, seek),
     /// or null if playback could not be started.
     /// </returns>
     /// <example>
     /// <code>
+    /// // Simple playback
     /// var token = Aural.Player.Play("music.ogg", 0.7f, true);
-    /// if (token != null)
+    /// 
+    /// // With filters
+    /// var effect = new AudioEffect
     /// {
-    ///     Thread.Sleep(5000);
-    ///     token.Pause();
-    ///     Thread.Sleep(2000);
-    ///     token.Play();
-    ///     Thread.Sleep(5000);
-    ///     token.End();
-    /// }
+    ///     LowPass = new LowPassFilter { Enabled = true, Frequency = 8000f }
+    /// };
+    /// var token2 = Aural.Player.Play("music.mp3", 0.7f, effect: effect);
     /// </code>
     /// </example>
-    public static PlaybackToken? Play(string filePath, float volume = 1.0f, bool loop = false)
+    public static PlaybackToken? Play(string filePath, float volume = 1.0f, bool loop = false, AudioEffect? effect = null)
     {
         try
         {
@@ -61,8 +62,8 @@ public static class Player
             // Resolve to absolute path for safety
             string absolutePath = Path.GetFullPath(filePath);
 
-            // Create audio player
-            var audioPlayer = new AudioPlayer(absolutePath, volume, loop);
+            // Create audio player (effect is cloned internally for immutability)
+            var audioPlayer = new AudioPlayer(absolutePath, volume, loop, effect);
 
             // Track active player
             ActivePlayers.Add(audioPlayer);

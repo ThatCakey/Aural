@@ -2,6 +2,7 @@ using System.Diagnostics;
 using OpenTK.Audio.OpenAL;
 using NVorbis;
 using NLayer;
+using Aural.Filters;
 
 namespace Aural;
 
@@ -23,6 +24,7 @@ internal class AudioPlayer : IDisposable
     private bool _disposed;    private bool _playbackFinished;  // Track if playback naturally ended vs was paused
     private readonly string _filePath;
     private readonly bool _shouldLoop;
+    private readonly AudioEffect _effect;  // Immutable copy of effect for this playback
     private byte[]? _audioData;
     private int _sampleRate;
     private int _channels;
@@ -31,6 +33,9 @@ internal class AudioPlayer : IDisposable
     public bool IsPlaying => _isPlaying;
 
     public bool PlaybackFinished => _playbackFinished;
+
+    /// <summary>Get a copy of the current audio effect settings (which filters are active).</summary>
+    public AudioEffect GetActiveEffect() => _effect.Clone();
 
     public float CurrentPosition
     {
@@ -61,11 +66,12 @@ internal class AudioPlayer : IDisposable
         }
     }
 
-    public AudioPlayer(string filePath, float volume, bool shouldLoop)
+    public AudioPlayer(string filePath, float volume, bool shouldLoop, AudioEffect? effect = null)
     {
         _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
         _volume = Math.Clamp(volume, 0.0f, 1.0f);
         _shouldLoop = shouldLoop;
+        _effect = effect?.Clone() ?? new AudioEffect();  // Deep clone for immutability
 
         InitializeOpenAL();
         Initialize();
@@ -117,6 +123,9 @@ internal class AudioPlayer : IDisposable
 
             if (_audioData is null || _audioData.Length == 0)
                 throw new InvalidOperationException("Failed to load audio data");
+
+            // Apply real-time audio filters (if enabled)
+            ApplyFilters();
 
             // Create OpenAL buffer
             _buffer = AL.GenBuffer();
@@ -308,6 +317,147 @@ internal class AudioPlayer : IDisposable
         catch (Exception ex)
         {
             throw new InvalidOperationException($"Failed to decode MP3: {ex.Message}", ex);
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        if (_audioData is null || _audioData.Length == 0)
+            return;
+
+        // Convert PCM16 bytes to float samples
+        int sampleCount = _audioData.Length / 2;
+        float[] samples = new float[sampleCount];
+        
+        for (int i = 0; i < sampleCount; i++)
+        {
+            short pcmSample = BitConverter.ToInt16(_audioData, i * 2);
+            samples[i] = pcmSample / 32768f;
+        }
+
+        // Apply low-pass filter
+        if (_effect.LowPass.Enabled)
+        {
+            _effect.LowPass.UpdateCoefficients(_sampleRate);
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float input = samples[i];
+                float output = _effect.LowPass._b0 * input + _effect.LowPass._b1 * _effect.LowPass._z1 + _effect.LowPass._b2 * _effect.LowPass._z2
+                             - _effect.LowPass._a1 * _effect.LowPass._z1 - _effect.LowPass._a2 * _effect.LowPass._z2;
+                _effect.LowPass._z2 = _effect.LowPass._z1;
+                _effect.LowPass._z1 = output;
+                samples[i] = output;
+            }
+        }
+
+        // Apply high-pass filter
+        if (_effect.HighPass.Enabled)
+        {
+            _effect.HighPass.UpdateCoefficients(_sampleRate);
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float input = samples[i];
+                float output = _effect.HighPass._b0 * input + _effect.HighPass._b1 * _effect.HighPass._z1 + _effect.HighPass._b2 * _effect.HighPass._z2
+                             - _effect.HighPass._a1 * _effect.HighPass._z1 - _effect.HighPass._a2 * _effect.HighPass._z2;
+                _effect.HighPass._z2 = _effect.HighPass._z1;
+                _effect.HighPass._z1 = output;
+                samples[i] = output;
+            }
+        }
+
+        // Apply reverb filter
+        if (_effect.Reverb.Enabled)
+        {
+            ApplyReverb(samples);
+        }
+
+        // Apply pitch shift filter
+        if (_effect.PitchShift.Enabled)
+        {
+            _effect.PitchShift.Initialize(_sampleRate);
+            ApplyPitchShift(samples);
+        }
+
+        // Convert float samples back to PCM16
+        _audioData = new byte[sampleCount * 2];
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float sample = Math.Clamp(samples[i], -1f, 1f);
+            short pcmSample = (short)(sample * 32767f);
+            BitConverter.GetBytes(pcmSample).CopyTo(_audioData, i * 2);
+        }
+    }
+
+    private void ApplyReverb(float[] samples)
+    {
+        for (int i = 0; i < samples.Length; i++)
+        {
+            float input = samples[i];
+            float comb1 = ProcessComb(_effect.Reverb._combBuffer1, ref _effect.Reverb._combIndex1, ref _effect.Reverb._combFilter1, input);
+            float comb2 = ProcessComb(_effect.Reverb._combBuffer2, ref _effect.Reverb._combIndex2, ref _effect.Reverb._combFilter2, input);
+            float comb3 = ProcessComb(_effect.Reverb._combBuffer3, ref _effect.Reverb._combIndex3, ref _effect.Reverb._combFilter3, input);
+            float comb4 = ProcessComb(_effect.Reverb._combBuffer4, ref _effect.Reverb._combIndex4, ref _effect.Reverb._combFilter4, input);
+            
+            float combined = comb1 + comb2 + comb3 + comb4;
+            float allpass1 = ProcessAllpass(_effect.Reverb._allpassBuffer1, ref _effect.Reverb._allpassIndex1, combined);
+            float allpass2 = ProcessAllpass(_effect.Reverb._allpassBuffer2, ref _effect.Reverb._allpassIndex2, allpass1);
+            
+            float wet = allpass2 * _effect.Reverb.Wet;
+            float dry = input * _effect.Reverb.Dry;
+            samples[i] = wet + dry;
+        }
+    }
+
+    private float ProcessComb(float[] buffer, ref int index, ref float filter, float input)
+    {
+        float output = buffer[index];
+        float damped = output * (1f - _effect.Reverb.DampFactor) + filter * _effect.Reverb.DampFactor;
+        filter = damped;
+        buffer[index] = input + damped * _effect.Reverb.RoomSize;
+        index = (index + 1) % buffer.Length;
+        return output;
+    }
+
+    private float ProcessAllpass(float[] buffer, ref int index, float input)
+    {
+        float output = buffer[index];
+        float toWrite = input + output * 0.5f;
+        buffer[index] = toWrite;
+        index = (index + 1) % buffer.Length;
+        return output - input;
+    }
+
+    private void ApplyPitchShift(float[] samples)
+    {
+        float pitchFactor = MathF.Pow(2f, _effect.PitchShift.SemiTones / 12f);
+        int windowSize = _effect.PitchShift.WindowSize;
+        int hopSize = _effect.PitchShift._hopSize;
+        
+        // Simplified pitch shift: resampling approach (quality is acceptable for playback)
+        if (pitchFactor != 1.0f && pitchFactor > 0.5f && pitchFactor < 2.0f)
+        {
+            float[] resampled = new float[(int)(samples.Length / pitchFactor)];
+            for (int i = 0; i < resampled.Length; i++)
+            {
+                float srcIndex = i * pitchFactor;
+                int idx = (int)srcIndex;
+                float frac = srcIndex - idx;
+                
+                if (idx + 1 < samples.Length)
+                {
+                    resampled[i] = samples[idx] * (1f - frac) + samples[idx + 1] * frac;
+                }
+                else if (idx < samples.Length)
+                {
+                    resampled[i] = samples[idx];
+                }
+            }
+            
+            // Copy resampled data back (may be different length)
+            for (int i = 0; i < Math.Min(samples.Length, resampled.Length); i++)
+            {
+                samples[i] = resampled[i];
+            }
         }
     }
 
