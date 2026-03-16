@@ -30,9 +30,55 @@ internal class AudioPlayer : IDisposable
     private int _channels;
     private int _totalSamples;
 
-    public bool IsPlaying => _isPlaying;
+    public bool IsPlaying
+    {
+        get
+        {
+            if (_source == 0)
+                return _isPlaying;
 
-    public bool PlaybackFinished => _playbackFinished;
+            try
+            {
+                // Check actual OpenAL source state
+                AL.GetSource(_source, ALGetSourcei.SourceState, out int state);
+                bool actuallyPlaying = (state == (int)ALSourceState.Playing);
+                
+                // If stopped unexpectedly (source finished), update our state
+                if (!actuallyPlaying && _isPlaying && !_shouldLoop)
+                {
+                    _isPlaying = false;
+                }
+                
+                return actuallyPlaying;
+            }
+            catch
+            {
+                return _isPlaying;
+            }
+        }
+    }
+
+    public bool PlaybackFinished
+    {
+        get
+        {
+            if (_source == 0)
+                return _playbackFinished;
+
+            try
+            {
+                // Check OpenAL source state: if stopped and not looping, playback has finished
+                AL.GetSource(_source, ALGetSourcei.SourceState, out int state);
+                if (state != (int)ALSourceState.Playing && !_shouldLoop)
+                {
+                    _playbackFinished = true;
+                }
+            }
+            catch { }
+
+            return _playbackFinished;
+        }
+    }
 
     /// <summary>Get a copy of the current audio effect settings (which filters are active).</summary>
     public AudioEffect GetActiveEffect() => _effect.Clone();

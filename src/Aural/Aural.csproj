@@ -9,12 +9,12 @@
 
     <!-- NuGet Packaging -->
     <PackageId>Aural</PackageId>
-    <Version>1.2.0</Version>
+    <Version>1.2.2</Version>
     <Title>Aural</Title>
     <Authors>ThatCakey</Authors>
     <Description>A cross-platform audio playback library for WAV, OGG, and MP3 formats with real-time audio filters (low-pass, high-pass, reverb, pitch shift). Play audio with a single line of code</Description>
     <PackageProjectUrl>https://github.com/ThatCakey/Aural</PackageProjectUrl>
-    <PackageReleaseNotes>v1.2.0: Added real-time audio filters (low-pass, high-pass, reverb, pitch shift) with opt-in complexity. v1.1.0: MP3 format support. v1.0: cross-platform audio playback for WAV and OGG.</PackageReleaseNotes>
+    <PackageReleaseNotes>v1.2.2: Fixed players not auto-cleaning after playback ends, preventing concurrency limit accumulation. v1.2.0: Real-time audio filters. v1.1.0: MP3 format support.</PackageReleaseNotes>
     <RepositoryUrl>https://github.com/ThatCakey/Aural</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
